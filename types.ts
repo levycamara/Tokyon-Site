@@ -1,10 +1,17 @@
+
 export type Language = 'pt' | 'en';
 
 export interface PortfolioItem {
+  slug?: string; // URL amigável (ex: 'nexcorp-rebrand')
+  serviceIds?: string[]; // Lista de IDs (ex: ['brand-core', 'orange-identity'])
   client: string;
   project: string;
   description: string;
-  imageColor: string; // Using simple colors/gradients for now as placeholders
+  imageColor: string; // Pode ser classe Tailwind ou URL de imagem
+  heroImage?: string; // Imagem de capa grande
+  challenge?: string; // Texto do Desafio
+  solution?: string; // Texto da Solução
+  gallery?: string[]; // Lista de URLs de imagens
 }
 
 export interface ServiceItem {

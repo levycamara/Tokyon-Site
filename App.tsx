@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -8,64 +9,53 @@ import { Footer } from './components/Footer';
 import { AIConsultant } from './components/AIConsultant';
 import { MethodologyPage } from './components/MethodologyPage';
 import { ServiceDetailPage } from './components/ServiceDetailPage';
+import { AdminGenerator } from './components/AdminGenerator';
+import { CaseStudyPage } from './components/CaseStudyPage'; // Nova Importação
 import { LanguageProvider } from './contexts/LanguageContext';
 import { TransitionProvider, useTransition } from './contexts/TransitionContext';
 import { PageTransition } from './components/PageTransition';
 
-type Page = 'home' | 'methodology' | 'service-detail';
+type Page = 'home' | 'methodology' | 'service-detail' | 'admin' | 'case-study'; // Tipo atualizado
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+  const [selectedCaseSlug, setSelectedCaseSlug] = useState<string>(''); // Novo Estado
   const { triggerTransition } = useTransition();
 
   const navigateTo = (page: Page, id?: string) => {
-    // 1. Handle Anchor/Scroll on the SAME PAGE (No transition needed)
-    if (page === currentPage) {
-      // Specifically for Home Page anchors like 'services', 'contact', etc.
+    if (page === currentPage && page !== 'admin' && page !== 'case-study') {
       if (page === 'home' && id) {
         const element = document.getElementById(id);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }
+        if (element) element.scrollIntoView({ behavior: 'smooth' });
         return;
       }
-      // If we are on detail page and clicked same detail, do nothing or scroll top
-      if (page === 'service-detail' && id === selectedServiceId) {
-         window.scrollTo({ top: 0, behavior: 'smooth' });
-         return;
-      }
-      // If simple refresh of view
       if (!id) {
          window.scrollTo({ top: 0, behavior: 'smooth' });
          return;
       }
     }
 
-    // 2. Handle Page Change (Trigger Transition)
-    
-    // Determine label (though we aren't using it visually anymore in the updated transition, we keep the logic sound)
     let label = "";
     if (page === 'home') label = "HOMEPAGE";
     if (page === 'methodology') label = "METHODOLOGY";
     if (page === 'service-detail') label = "SERVICE DATA";
+    if (page === 'admin') label = "RESTRICTED AREA";
+    if (page === 'case-study') label = "PROJECT VIEW";
 
     triggerTransition(label, () => {
-      // Logic executed whilst screen is covered
       if (page === 'service-detail' && id) {
         setSelectedServiceId(id);
       }
+      if (page === 'case-study' && id) {
+        setSelectedCaseSlug(id);
+      }
       setCurrentPage(page);
       
-      // Post-transition scrolling
       setTimeout(() => {
-        if (page === 'home') {
-          if (id) {
-             const element = document.getElementById(id);
-             if (element) element.scrollIntoView({ behavior: 'smooth' });
-          } else {
-             window.scrollTo(0, 0);
-          }
+        if (page === 'home' && id) {
+           const element = document.getElementById(id);
+           if (element) element.scrollIntoView({ behavior: 'smooth' });
         } else {
            window.scrollTo(0, 0);
         }
@@ -76,7 +66,9 @@ function AppContent() {
   return (
     <div className="bg-tokyon-black min-h-screen text-white selection:bg-tokyon-orange selection:text-white">
       <PageTransition />
-      <Navbar onNavigate={navigateTo} />
+      
+      {/* Esconde Navbar em páginas imersivas */}
+      {currentPage !== 'admin' && currentPage !== 'case-study' && <Navbar onNavigate={navigateTo} />}
       
       <main>
         {currentPage === 'home' ? (
@@ -90,11 +82,16 @@ function AppContent() {
           <MethodologyPage onNavigate={navigateTo} />
         ) : currentPage === 'service-detail' ? (
           <ServiceDetailPage serviceId={selectedServiceId} onNavigate={navigateTo} />
+        ) : currentPage === 'case-study' ? (
+          <CaseStudyPage slug={selectedCaseSlug} onNavigate={navigateTo} />
+        ) : currentPage === 'admin' ? (
+          <AdminGenerator onNavigate={navigateTo} />
         ) : null}
       </main>
 
-      <Footer />
-      <AIConsultant />
+      {currentPage !== 'case-study' && <Footer onNavigate={navigateTo} />}
+      
+      {currentPage !== 'admin' && <AIConsultant />}
     </div>
   );
 }

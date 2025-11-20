@@ -1,10 +1,20 @@
 import React from 'react';
 import { TokyonLogo } from './TokyonLogo';
+import { LockKey } from 'phosphor-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
-export const Footer: React.FC = () => {
-  // Footer content is mostly universal, but we can use context for future expansion if needed
+interface FooterProps {
+  onNavigate?: (page: any) => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const { language } = useLanguage();
+
+  const handleAdminClick = () => {
+    if (onNavigate) {
+      onNavigate('admin');
+    }
+  };
 
   return (
     <footer className="bg-tokyon-black py-12 border-t border-white/10">
@@ -21,9 +31,19 @@ export const Footer: React.FC = () => {
                <a href="#" className="hover:text-white transition-colors">{language === 'pt' ? 'Privacidade' : 'Privacy'}</a>
             </div>
 
-            <p className="text-xs font-mono text-gray-600">
-               © {new Date().getFullYear()}
-            </p>
+            <div className="flex items-center gap-4">
+               <p className="text-xs font-mono text-gray-600">
+                  © {new Date().getFullYear()}
+               </p>
+               {/* SECRET ADMIN BUTTON */}
+               <button 
+                 onClick={handleAdminClick}
+                 className="text-gray-800 hover:text-tokyon-orange transition-colors p-1"
+                 title="Admin Access"
+               >
+                 <LockKey size={12} weight="fill" />
+               </button>
+            </div>
          </div>
       </div>
     </footer>

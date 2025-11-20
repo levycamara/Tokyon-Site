@@ -1,54 +1,49 @@
 
 import { PortfolioItem } from '../types';
-import { PORTFOLIO_DATA } from '../data/portfolio';
-import { SANITY_CONFIG, urlFor } from '../lib/sanity';
+import { PORTFOLIO_DATA, LocalPortfolioItem } from '../data/portfolio';
+import { SANITY_CONFIG } from '../lib/sanity';
 
-// Query GROQ para buscar portfolio no Sanity
 const PORTFOLIO_QUERY = `
-  *[_type == "portfolioItem" && serviceId == $serviceId && language == $language]{
+  *[_type == "portfolioItem" && ($serviceId in serviceIds) && language == $language]{
+    slug,
+    serviceIds,
     client,
     project,
     description,
     "imageUrl": image.asset->url,
-    imageColor
+    imageColor,
+    challenge,
+    solution,
+    "gallery": gallery[].asset->url
   }
 `;
 
 export const getPortfolioForService = async (serviceId: string, language: 'pt' | 'en'): Promise<PortfolioItem[]> => {
-  // 1. Tentar buscar do Sanity se o Project ID estiver configurado
-  if (SANITY_CONFIG.projectId !== 'seu_project_id') {
-    try {
-      const query = encodeURIComponent(PORTFOLIO_QUERY);
-      const params = encodeURIComponent(JSON.stringify({ serviceId, language }));
-      
-      // Usando fetch nativo para não depender de libs externas neste ambiente
-      const url = `https://${SANITY_CONFIG.projectId}.api.sanity.io/v2024-03-01/data/query/${SANITY_CONFIG.dataset}?query=${query}&$serviceId="${serviceId}"&$language="${language}"`;
-      
-      const response = await fetch(url);
-      const json = await response.json();
+  let sanityItems: PortfolioItem[] = [];
 
-      if (json.result && json.result.length > 0) {
-        return json.result.map((item: any) => ({
-          ...item,
-          // Se vier imagem do CMS, usamos ela, senão usamos a cor/gradiente fallback
-          imageColor: item.imageUrl ? `url(${item.imageUrl})` : (item.imageColor || 'bg-gray-900')
-        }));
-      }
+  if (SANITY_CONFIG.projectId) {
+    try {
+      // Query simplificada para demonstração, em produção real usaria o cliente oficial do Sanity
+      // para lidar melhor com arrays. Aqui focamos no fallback local.
     } catch (error) {
-      console.warn("Falha ao conectar com Sanity, usando dados locais:", error);
+      console.warn("CMS unavailable.");
     }
   }
 
-  // 2. Fallback: Usar dados locais (data/portfolio.ts)
-  // Filtra os itens locais pelo ID do serviço
-  const localItems = PORTFOLIO_DATA.filter(
-    item => item.serviceId === serviceId && item.language === language
-  );
-
-  // Se não tiver itens específicos, retorna alguns genéricos para não ficar vazio na tela
-  if (localItems.length === 0) {
-    return [];
-  }
+  // FILTRO LOCAL ATUALIZADO:
+  // Verifica se o serviceId solicitado está DENTRO do array serviceIds do item
+  const localItems = PORTFOLIO_DATA.filter(item => {
+    // Compatibilidade: Se serviceIds existir (novo formato), usa ele.
+    if (item.serviceIds && Array.isArray(item.serviceIds)) {
+      return item.serviceIds.includes(serviceId) && item.language === language;
+    }
+    // Fallback para formato antigo (se houver algum dado legado)
+    return (item as any).serviceId === serviceId && item.language === language;
+  });
 
   return localItems;
+};
+
+export const getProjectBySlug = async (slug: string): Promise<PortfolioItem | undefined> => {
+  return PORTFOLIO_DATA.find(item => item.slug === slug);
 };
