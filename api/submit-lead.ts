@@ -26,7 +26,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // PASSO 1: INTROSPECÇÃO AVANÇADA
-    // Buscamos ID, Type e LABEL para fazer o match inteligente pelo nome do campo
     const introspectionQuery = `
       query GetPipeFields($pipe_id: ID!) {
         pipe(id: $pipe_id) {
@@ -52,39 +51,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!introJson.errors && introJson.data?.pipe?.start_form_fields) {
       const fields = introJson.data.pipe.start_form_fields;
       
-      // Helper para buscar campo por palavras-chave (Case insensitive)
-      const findField = (keywords: string[]) => {
+      // Tipos de campos que aceitam TEXTO livre com segurança
+      const safeTextTypes = ['short_text', 'long_text', 'email', 'phone', 'text'];
+
+      // Helper atualizado: Busca por palavra-chave E verifica se o tipo é compatível com texto
+      const findSafeField = (keywords: string[]) => {
         return fields.find((f: any) => 
-          f.label && keywords.some(k => f.label.toLowerCase().includes(k))
+          f.label && 
+          keywords.some(k => f.label.toLowerCase().includes(k)) &&
+          safeTextTypes.includes(f.type) // IMPORTANTE: Só aceita se for campo de texto
         );
       };
 
-      // 1. Mapear EMPRESA (Obrigatório segundo o erro)
-      const companyField = findField(['empresa', 'company', 'nome da empresa', 'organização']);
+      // 1. Mapear EMPRESA
+      // Se o campo "Empresa" for Database Connection ou Select, ele será ignorado aqui (corrigindo o erro)
+      // mas o nome da empresa ainda vai no Título do Card.
+      const companyField = findSafeField(['empresa', 'company', 'nome da empresa', 'organização']);
       if (companyField) {
         fieldsAttributes.push({ field_id: companyField.id, field_value: company });
       }
 
       // 2. Mapear EMAIL
-      const emailField = findField(['email', 'e-mail', 'correio eletrônico']);
+      const emailField = findSafeField(['email', 'e-mail', 'correio eletrônico']);
       if (emailField) {
         fieldsAttributes.push({ field_id: emailField.id, field_value: email });
       }
 
       // 3. Mapear TELEFONE / WHATSAPP
-      const phoneField = findField(['telefone', 'celular', 'whatsapp', 'phone', 'contato']);
+      const phoneField = findSafeField(['telefone', 'celular', 'whatsapp', 'phone', 'contato']);
       if (phoneField) {
         fieldsAttributes.push({ field_id: phoneField.id, field_value: phone });
       }
 
-      // 4. Mapear DESCRIÇÃO / OBSERVAÇÕES / DESAFIO
-      // Preferência por campos de texto longo ou com nome explícito
+      // 4. Mapear DESCRIÇÃO / OBSERVAÇÕES / DESAFIO (Fallback para todo o resto)
+      // Aqui aceitamos qualquer campo de texto longo, independente do nome
       const descriptionField = fields.find((f: any) => 
         (f.type === 'long_text') || 
-        (f.label && ['desafio', 'obs', 'notas', 'detalhes', 'challenge', 'descrição'].some(k => f.label.toLowerCase().includes(k)))
+        (f.label && ['desafio', 'obs', 'notas', 'detalhes', 'challenge', 'descrição', 'sobre'].some(k => f.label.toLowerCase().includes(k)) && safeTextTypes.includes(f.type))
       );
 
-      // Montamos um texto combinado para garantir que nada se perca, mesmo se os campos acima falharem
+      // Montamos um texto combinado para garantir que nada se perca
       const combinedDescription = `
         Empresa: ${company}
         Email: ${email}
@@ -96,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
 
       if (descriptionField) {
-        // Evita duplicar se por acaso o campo de descrição for o mesmo de algum anterior (improvável, mas seguro)
+        // Verifica se já não usamos esse ID (ex: se o campo "Empresa" era long_text)
         const alreadyMapped = fieldsAttributes.some(fa => fa.field_id === descriptionField.id);
         if (!alreadyMapped) {
           fieldsAttributes.push({ field_id: descriptionField.id, field_value: combinedDescription });
@@ -105,14 +111,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // PASSO 2: CRIAÇÃO DO CARD
-    // O payload principal
     const inputPayload: any = {
       pipe_id: PIPEFY_PIPE_ID,
-      title: company, // Define o título do card como o nome da empresa
+      title: company, // O nome da empresa SEMPRE vai no título, garantindo identificação
       fields_attributes: fieldsAttributes
     };
 
-    console.log("Enviando Payload para Pipefy:", JSON.stringify(inputPayload, null, 2));
+    console.log("Enviando Payload Filtrado:", JSON.stringify(inputPayload, null, 2));
 
     const mutation = `
       mutation CreateCard($input: CreateCardInput!) {
@@ -134,9 +139,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const createJson = await createRes.json();
 
     if (createJson.errors) {
-      console.error('Pipefy Error:', JSON.stringify(createJson.errors));
+      console.error('Pipefy Error Details:', JSON.stringify(createJson.errors));
+      const msg = createJson.errors[0]?.message || "Erro desconhecido";
+      
+      // Se ainda der erro de campo obrigatório, avisamos para verificar a configuração do Pipe
+      if (msg.includes("obrigatório") || msg.includes("required")) {
+         return res.status(500).json({ 
+          message: `Erro de Configuração no Pipefy: Um campo obrigatório não pôde ser preenchido automaticamente. (${msg})`,
+          details: createJson.errors 
+        });
+      }
+
       return res.status(500).json({ 
-        message: `Erro no Pipefy: ${createJson.errors[0]?.message}`,
+        message: `Erro no Pipefy: ${msg}`,
         details: createJson.errors 
       });
     }
