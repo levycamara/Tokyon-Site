@@ -93,9 +93,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     if (targetFieldId) {
-      // Se achamos um campo de descrição, usamos ele
+      // Se achamos um campo de descrição, usamos ele.
+      // FIX: Alterado de 'Any' para 'String' pois o Pipefy não suporta 'Any' e estamos enviando texto.
       mutation = `
-        mutation CreateCard($pipe_id: ID!, $title: String!, $field_value: Any) {
+        mutation CreateCard($pipe_id: ID!, $title: String!, $field_value: String) {
           createCard(input: {
             pipe_id: $pipe_id,
             title: $title,
@@ -110,7 +111,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       variables.field_value = combinedDescription;
     } else {
       // Se NÃO achamos nenhum campo de texto no formulário, colocamos tudo no Título (Fallback de segurança)
-      // Isso é feio, mas garante que o lead chega e não dá erro.
       mutation = `
         mutation CreateCard($pipe_id: ID!, $title: String!) {
           createCard(input: {
