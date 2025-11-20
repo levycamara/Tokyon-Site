@@ -16,8 +16,8 @@ export const Footer: React.FC = () => {
             </div>
             
             <div className="flex gap-8 text-xs font-mono text-gray-500 uppercase tracking-wider">
-               <a href="#" className="hover:text-white transition-colors">Instagram</a>
-               <a href="#" className="hover:text-white transition-colors">LinkedIn</a>
+               <a href="https://instagram.com/letstokyon" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a>
+               <a href="https://www.linkedin.com/company/tokyon" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">LinkedIn</a>
                <a href="#" className="hover:text-white transition-colors">{language === 'pt' ? 'Privacidade' : 'Privacy'}</a>
             </div>
 

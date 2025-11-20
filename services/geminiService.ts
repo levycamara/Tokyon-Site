@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { SYSTEM_INSTRUCTION } from "../constants";
 
@@ -7,10 +8,15 @@ let chatSession: Chat | null = null;
 
 const getAI = (): GoogleGenAI => {
   if (!aiInstance) {
-    if (!process.env.API_KEY) {
+    // Use process.env.API_KEY as per guidelines
+    const apiKey = process.env.API_KEY;
+    
+    if (!apiKey) {
+      console.error("API_KEY not found. Make sure to set it in your environment variables.");
+      // Fallback prevents immediate crash but chat won't work
       throw new Error("API Key not found in environment variables");
     }
-    aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    aiInstance = new GoogleGenAI({ apiKey });
   }
   return aiInstance;
 };
@@ -27,7 +33,7 @@ export const initializeChat = async (): Promise<void> => {
     });
   } catch (error) {
     console.error("Failed to initialize chat:", error);
-    throw error;
+    // Don't re-throw here to avoid crashing the whole app on load if key is missing
   }
 };
 
@@ -37,7 +43,7 @@ export const sendMessage = async (message: string): Promise<string> => {
   }
   
   if (!chatSession) {
-    throw new Error("Chat session could not be initialized");
+    return "O sistema de consultoria está indisponível no momento (Configuração de API pendente).";
   }
 
   try {

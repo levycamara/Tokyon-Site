@@ -6,26 +6,40 @@ interface LogoProps {
 }
 
 export const TokyonLogo: React.FC<LogoProps> = ({ className = "h-8", showText = true }) => {
+  // Se showText for true, mostra o SVG completo (Ícone + Texto).
+  // Se for false, ajusta o viewBox para mostrar apenas a área do ícone (cortando o texto).
+  const viewBox = showText ? "0 0 378.9 74.71" : "0 0 85 74.71";
+
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      {/* Icon / Symbol - The 8-pointed star/spark */}
-      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-auto text-tokyon-orange">
-        <path d="M42 0H58V42H100V58H58V100H42V58H0V42H42V0Z" fill="currentColor" />
-        <path d="M20.5 20.5L29.5 29.5L70.5 70.5L79.5 79.5" stroke="currentColor" strokeWidth="16" strokeLinecap="butt" className="opacity-0" /> 
-        {/* Simplified geometric representation of the asterisk/spark provided in the prompt */}
-        <rect x="42" y="0" width="16" height="100" fill="currentColor" />
-        <rect x="0" y="42" width="100" height="16" fill="currentColor" />
-        <rect x="18.6863" y="27.1716" width="16" height="87" transform="rotate(-45 18.6863 27.1716)" fill="currentColor" />
-        <rect x="72.8284" y="15.8579" width="16" height="87" transform="rotate(45 72.8284 15.8579)" fill="currentColor" />
-        <rect x="42" y="42" width="16" height="16" fill="white" /> {/* Center cutout */}
-      </svg>
-      
-      {/* Text */}
+    <svg 
+      viewBox={viewBox} 
+      xmlns="http://www.w3.org/2000/svg" 
+      className={`${className} w-auto text-[rgb(var(--color-text-primary))] transition-colors duration-300`}
+      preserveAspectRatio="xMinYMid meet"
+    >
+      {/* GRUPO 1: O ÍCONE (ESTRELA) */}
+      <g>
+        <rect x="32.72" width="9.27" height="32.72" fill="currentColor"/>
+        <rect x="53.72" y="20.99" width="9.27" height="32.72" transform="translate(95.71 -20.99) rotate(90)" fill="currentColor"/>
+        <rect x="32.72" y="41.99" width="9.27" height="32.72" transform="translate(74.71 116.7) rotate(180)" fill="currentColor"/>
+        <rect x="11.73" y="20.99" width="9.27" height="32.72" transform="translate(-20.99 53.72) rotate(-90)" fill="currentColor"/>
+        <rect x="50.84" y="43.75" width="9.27" height="23.46" transform="translate(133.94 55.48) rotate(135)" fill="currentColor"/>
+        <rect x="14.6" y="43.75" width="9.27" height="23.46" transform="translate(-6.39 108.31) rotate(-135)" fill="currentColor"/>
+        <rect x="14.6" y="7.51" width="9.27" height="23.46" transform="translate(-7.97 19.23) rotate(-45)" fill="currentColor"/>
+        <rect x="50.84" y="7.51" width="9.27" height="23.46" transform="translate(29.85 -33.6) rotate(45)" fill="currentColor"/>
+      </g>
+
+      {/* GRUPO 2: O TEXTO (TOKYON) - Renderizado apenas se showText for true */}
       {showText && (
-        <span className="font-display font-bold tracking-tighter text-2xl text-white uppercase">
-          Tokyon
-        </span>
+        <g>
+          <path d="m95.18,12.46h41.02v13.08h-13.08v36.42h-15.2V25.54h-12.75v-13.08Z" fill="currentColor"/>
+          <path d="m155.47,62.22c-1.63-.24-3.29-.65-4.97-1.22-1.35-.4-2.75-1.03-4.2-1.89-1.48-.88-2.65-1.72-3.51-2.52-1.06-.93-1.99-1.94-2.78-3.05-.86-1.06-1.59-2.23-2.19-3.51-.73-1.61-1.25-2.95-1.56-4.01-.4-1.35-.7-2.77-.89-4.27-.22-1.59-.33-3.11-.33-4.57,0-1.24.11-2.6.33-4.11.15-1.08.43-2.37.83-3.87.31-1.21.78-2.44,1.42-3.67.44-.99,1.09-2.1,1.95-3.31.84-1.15,1.66-2.14,2.45-2.98,1.06-1.06,2.03-1.9,2.91-2.52,1.24-.93,2.36-1.63,3.38-2.12,1.08-.53,2.37-1.05,3.87-1.56,1.5-.44,2.92-.75,4.27-.93,1.81-.24,3.38-.36,4.7-.36,1.77,0,3.56.14,5.4.43,1.41.22,3.05.61,4.9,1.16,1.68.6,3.08,1.22,4.2,1.89,1.04.62,2.21,1.46,3.51,2.52,1.15,1.02,2.14,2.03,2.98,3.05.97,1.26,1.74,2.45,2.32,3.58.71,1.54,1.25,2.86,1.62,3.94.49,1.74.81,3.19.96,4.34.22,1.66.33,3.17.33,4.54,0,1.57-.09,2.92-.26,4.07-.15,1.1-.43,2.42-.83,3.94-.31,1.02-.78,2.22-1.42,3.61-.75,1.48-1.4,2.58-1.95,3.31-.82,1.17-1.63,2.16-2.45,2.98-.84.91-1.81,1.77-2.91,2.58-1.08.75-2.23,1.42-3.44,2.02-1.57.77-2.86,1.3-3.87,1.59-1.44.46-2.88.79-4.34.99-1.72.22-3.33.33-4.83.33-2.05,0-3.92-.13-5.59-.4Zm14-16.26c1.9-2.27,2.85-5.2,2.85-8.77s-.93-6.58-2.78-8.94c-1.88-2.25-4.65-3.38-8.31-3.38s-6.33,1.15-8.21,3.44c-1.94,2.3-2.91,5.25-2.91,8.87s.9,6.54,2.71,8.77c1.77,2.25,4.55,3.38,8.34,3.38s6.41-1.13,8.31-3.38Z" fill="currentColor"/>
+          <path d="m205.23,12.46v23.54h2.71l13.47-23.54h15.92l-14.5,24,15.13,25.49h-16.75l-13.34-24.6h-2.65v24.6h-14.53V12.46h14.53Z" fill="currentColor"/>
+          <path d="m249.49,12.46l8.14,16.49,8.41-16.49h15.59l-16.82,30.99v18.51h-14.67v-18.44l-16.65-31.05h15.99Z" fill="currentColor"/>
+          <path d="m296.27,62.22c-1.63-.24-3.29-.65-4.97-1.22-1.35-.4-2.75-1.03-4.2-1.89-1.48-.88-2.65-1.72-3.51-2.52-1.06-.93-1.99-1.94-2.78-3.05-.86-1.06-1.59-2.23-2.19-3.51-.73-1.61-1.25-2.95-1.56-4.01-.4-1.35-.7-2.77-.89-4.27-.22-1.59-.33-3.11-.33-4.57,0-1.24.11-2.6.33-4.11.15-1.08.43-2.37.83-3.87.31-1.21.78-2.44,1.42-3.67.44-.99,1.09-2.1,1.95-3.31.84-1.15,1.66-2.14,2.45-2.98,1.06-1.06,2.03-1.9,2.91-2.52,1.24-.93,2.36-1.63,3.38-2.12,1.08-.53,2.37-1.05,3.87-1.56,1.5-.44,2.92-.75,4.27-.93,1.81-.24,3.38-.36,4.7-.36,1.77,0,3.56.14,5.4.43,1.41.22,3.05.61,4.9,1.16,1.68.6,3.08,1.22,4.2,1.89,1.04.62,2.21,1.46,3.51,2.52,1.15,1.02,2.14,2.03,2.98,3.05.97,1.26,1.74,2.45,2.32,3.58.71,1.54,1.25,2.86,1.62,3.94.49,1.74.81,3.19.96,4.34.22,1.66.33,3.17.33,4.54,0,1.57-.09,2.92-.26,4.07-.15,1.1-.43,2.42-.83,3.94-.31,1.02-.78,2.22-1.42,3.61-.75,1.48-1.4,2.58-1.95,3.31-.82,1.17-1.63,2.16-2.45,2.98-.84.91-1.81,1.77-2.91,2.58-1.08.75-2.23,1.42-3.44,2.02-1.57.77-2.86,1.3-3.87,1.59-1.44.46-2.88.79-4.34.99-1.72.22-3.33.33-4.83.33-2.05,0-3.92-.13-5.59-.4Zm14-16.26c1.9-2.27,2.85-5.2,2.85-8.77s-.93-6.58-2.78-8.94c-1.88-2.25-4.65-3.38-8.31-3.38s-6.33,1.15-8.21,3.44c-1.94,2.3-2.91,5.25-2.91,8.87s.9,6.54,2.71,8.77c1.77,2.25,4.55,3.38,8.34,3.38s6.41-1.13,8.31-3.38Z" fill="currentColor"/>
+          <path d="m347.32,12.46l12.94,36.68,3.51,10.1-.07-10.86V12.46h15.2v49.49h-15.79l-11.95-34.17-4.6-13.01.07,13.87v33.3h-15.13V12.46h15.82Z" fill="currentColor"/>
+        </g>
       )}
-    </div>
+    </svg>
   );
 };
