@@ -25,14 +25,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
 
   try {
-    // PASSO 1: INTROSPECÇÃO
-    // Descobrir se existe um campo para salvar a descrição
+    // PASSO 1: INTROSPECÇÃO AVANÇADA
+    // Buscamos ID, Type e LABEL para fazer o match inteligente pelo nome do campo
     const introspectionQuery = `
       query GetPipeFields($pipe_id: ID!) {
         pipe(id: $pipe_id) {
           start_form_fields {
             id
             type
+            label
           }
         }
       }
@@ -46,54 +47,72 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const introJson = await introspectionRes.json();
     
-    let targetFieldId = null;
+    const fieldsAttributes: Array<{ field_id: string, field_value: string }> = [];
 
     if (!introJson.errors && introJson.data?.pipe?.start_form_fields) {
       const fields = introJson.data.pipe.start_form_fields;
       
-      // Tenta achar um campo que pareça descrição ou observação
+      // Helper para buscar campo por palavras-chave (Case insensitive)
+      const findField = (keywords: string[]) => {
+        return fields.find((f: any) => 
+          f.label && keywords.some(k => f.label.toLowerCase().includes(k))
+        );
+      };
+
+      // 1. Mapear EMPRESA (Obrigatório segundo o erro)
+      const companyField = findField(['empresa', 'company', 'nome da empresa', 'organização']);
+      if (companyField) {
+        fieldsAttributes.push({ field_id: companyField.id, field_value: company });
+      }
+
+      // 2. Mapear EMAIL
+      const emailField = findField(['email', 'e-mail', 'correio eletrônico']);
+      if (emailField) {
+        fieldsAttributes.push({ field_id: emailField.id, field_value: email });
+      }
+
+      // 3. Mapear TELEFONE / WHATSAPP
+      const phoneField = findField(['telefone', 'celular', 'whatsapp', 'phone', 'contato']);
+      if (phoneField) {
+        fieldsAttributes.push({ field_id: phoneField.id, field_value: phone });
+      }
+
+      // 4. Mapear DESCRIÇÃO / OBSERVAÇÕES / DESAFIO
+      // Preferência por campos de texto longo ou com nome explícito
       const descriptionField = fields.find((f: any) => 
-        f.type === 'long_text' || 
-        f.id.includes('description') || 
-        f.id.includes('obs') || 
-        f.id.includes('notas')
+        (f.type === 'long_text') || 
+        (f.label && ['desafio', 'obs', 'notas', 'detalhes', 'challenge', 'descrição'].some(k => f.label.toLowerCase().includes(k)))
       );
 
+      // Montamos um texto combinado para garantir que nada se perca, mesmo se os campos acima falharem
+      const combinedDescription = `
+        Empresa: ${company}
+        Email: ${email}
+        WhatsApp: ${phone}
+        
+        ----------------
+        DESAFIO / MENSAGEM:
+        ${challenge}
+      `;
+
       if (descriptionField) {
-        targetFieldId = descriptionField.id;
-      } else {
-        // Fallback para qualquer campo de texto
-        const anyTextField = fields.find((f: any) => f.type === 'text' || f.type === 'long_text');
-        if (anyTextField) targetFieldId = anyTextField.id;
+        // Evita duplicar se por acaso o campo de descrição for o mesmo de algum anterior (improvável, mas seguro)
+        const alreadyMapped = fieldsAttributes.some(fa => fa.field_id === descriptionField.id);
+        if (!alreadyMapped) {
+          fieldsAttributes.push({ field_id: descriptionField.id, field_value: combinedDescription });
+        }
       }
     }
 
-    // Monta a descrição com todos os dados
-    const combinedDescription = `
-      Empresa: ${company}
-      Email: ${email}
-      WhatsApp/Tel: ${phone}
-      
-      Desafio:
-      ${challenge}
-    `;
-
-    // PASSO 2: CRIAÇÃO DO CARD USANDO INPUT OBJECT
-    // Esta é a forma mais segura. Criamos o objeto payload no JS e enviamos como uma única variável.
-    
+    // PASSO 2: CRIAÇÃO DO CARD
+    // O payload principal
     const inputPayload: any = {
       pipe_id: PIPEFY_PIPE_ID,
-      title: company
+      title: company, // Define o título do card como o nome da empresa
+      fields_attributes: fieldsAttributes
     };
 
-    if (targetFieldId) {
-      inputPayload.fields_attributes = [
-        { field_id: targetFieldId, field_value: combinedDescription }
-      ];
-    } else {
-      // Fallback se não achou campo: coloca tudo no título
-      inputPayload.title = `${company} - ${email} - ${phone}`;
-    }
+    console.log("Enviando Payload para Pipefy:", JSON.stringify(inputPayload, null, 2));
 
     const mutation = `
       mutation CreateCard($input: CreateCardInput!) {
