@@ -16,30 +16,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const PIPEFY_PIPE_ID = process.env.PIPEFY_PIPE_ID;
 
   if (!PIPEFY_TOKEN || !PIPEFY_PIPE_ID) {
-    return res.status(500).json({ message: 'Server configuration error: Missing Pipefy credentials' });
+    return res.status(500).json({ message: 'Configuração de servidor incompleta: Falta Token ou ID do Pipefy.' });
   }
 
-  // --- CONFIGURAÇÃO DOS CAMPOS DO PIPEFY ---
-  // Você deve pegar os IDs dos campos no seu Pipefy (Start Form) e colocar nas variáveis de ambiente
-  // ou substituir diretamente aqui se preferir.
-  // Ex: Se o ID do campo email for "email_contato", use: { field_id: "email_contato", field_value: email }
-  
-  // Como não tenho seus IDs, vou concatenar tudo na descrição para garantir que você receba os dados
-  // mesmo sem configurar os IDs específicos. O Título será a Empresa.
-  
+  // Monta a descrição com HTML simples para ficar legível no card
   const combinedDescription = `
-    <strong>Email:</strong> ${email}<br/>
-    <strong>WhatsApp/Tel:</strong> ${phone}<br/>
-    <strong>Desafio:</strong> ${challenge}
+    <p><strong>Email:</strong> ${email}</p>
+    <p><strong>WhatsApp/Tel:</strong> ${phone}</p>
+    <p><strong>Desafio:</strong> ${challenge}</p>
   `;
 
+  // QUERY GRAPHQL SEGURA USANDO VARIÁVEIS
+  // Isso evita erros de sintaxe se o usuário digitar aspas " ou quebras de linha
   const mutation = `
-    mutation {
+    mutation CreateCard($pipe_id: ID!, $title: String!, $description_value: Any) {
       createCard(input: {
-        pipe_id: "${PIPEFY_PIPE_ID}",
-        title: "${company}",
+        pipe_id: $pipe_id,
+        title: $title,
         fields_attributes: [
-          { field_id: "description", field_value: "${combinedDescription.replace(/\n/g, '')}" }
+          { field_id: "description", field_value: $description_value }
         ]
       }) {
         card {
@@ -50,6 +45,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   `;
 
+  const variables = {
+    pipe_id: PIPEFY_PIPE_ID,
+    title: company,
+    description_value: combinedDescription
+  };
+
   try {
     const response = await fetch('https://api.pipefy.com/graphql', {
       method: 'POST',
@@ -57,19 +58,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${PIPEFY_TOKEN}`,
       },
-      body: JSON.stringify({ query: mutation }),
+      body: JSON.stringify({ query: mutation, variables: variables }),
     });
 
     const json = await response.json();
 
     if (json.errors) {
-      console.error('Pipefy Error:', json.errors);
-      return res.status(500).json({ message: 'Error creating card in Pipefy', details: json.errors });
+      console.error('Pipefy API Error:', JSON.stringify(json.errors, null, 2));
+      
+      // Tenta extrair uma mensagem amigável do erro
+      const errorMsg = json.errors[0]?.message || 'Erro desconhecido no Pipefy';
+      
+      if (errorMsg.includes('field_id')) {
+        return res.status(400).json({ 
+          message: 'Erro de Campo: O campo "description" não foi encontrado no seu Pipe.',
+          details: 'Vá no Pipefy > Notas sobre o negócio > Editar > API ID e mude para "description".'
+        });
+      }
+
+      return res.status(500).json({ message: `Erro no Pipefy: ${errorMsg}` });
     }
 
-    return res.status(200).json({ message: 'Lead created successfully', id: json.data.createCard.card.id });
+    return res.status(200).json({ message: 'Lead criado com sucesso', id: json.data.createCard.card.id });
   } catch (error) {
     console.error('Server Error:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: 'Erro interno de conexão com Pipefy.' });
   }
 }
