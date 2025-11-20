@@ -19,69 +19,133 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ message: 'Configuração de servidor incompleta: Falta Token ou ID do Pipefy.' });
   }
 
-  // Monta a descrição com HTML simples para ficar legível no card
-  const combinedDescription = `
-    <p><strong>Email:</strong> ${email}</p>
-    <p><strong>WhatsApp/Tel:</strong> ${phone}</p>
-    <p><strong>Desafio:</strong> ${challenge}</p>
-  `;
-
-  // QUERY GRAPHQL SEGURA USANDO VARIÁVEIS
-  // Isso evita erros de sintaxe se o usuário digitar aspas " ou quebras de linha
-  const mutation = `
-    mutation CreateCard($pipe_id: ID!, $title: String!, $description_value: Any) {
-      createCard(input: {
-        pipe_id: $pipe_id,
-        title: $title,
-        fields_attributes: [
-          { field_id: "description", field_value: $description_value }
-        ]
-      }) {
-        card {
-          id
-          title
-        }
-      }
-    }
-  `;
-
-  const variables = {
-    pipe_id: PIPEFY_PIPE_ID,
-    title: company,
-    description_value: combinedDescription
+  const commonHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${PIPEFY_TOKEN}`,
   };
 
   try {
-    const response = await fetch('https://api.pipefy.com/graphql', {
+    // PASSO 1: INTROSPECÇÃO (Descobrir quais campos existem no Pipe)
+    // Ao invés de adivinhar o ID ("description"), perguntamos ao Pipe quais campos ele tem.
+    const introspectionQuery = `
+      query GetPipeFields($pipe_id: ID!) {
+        pipe(id: $pipe_id) {
+          start_form_fields {
+            id
+            label
+            type
+          }
+        }
+      }
+    `;
+
+    const introspectionRes = await fetch('https://api.pipefy.com/graphql', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${PIPEFY_TOKEN}`,
-      },
+      headers: commonHeaders,
+      body: JSON.stringify({ query: introspectionQuery, variables: { pipe_id: PIPEFY_PIPE_ID } }),
+    });
+
+    const introJson = await introspectionRes.json();
+
+    if (introJson.errors) {
+      console.error('Pipefy Introspection Error:', introJson.errors);
+      return res.status(500).json({ message: 'Erro ao ler configurações do Pipefy.' });
+    }
+
+    const fields = introJson.data.pipe.start_form_fields;
+    
+    // Lógica Inteligente para encontrar o campo de "Detalhes/Notas"
+    // 1. Procura por campos comuns de descrição
+    // 2. Se não achar, pega o primeiro campo de "text" ou "long_text" que encontrar
+    let targetFieldId = null;
+
+    const descriptionField = fields.find((f: any) => 
+      f.type === 'long_text' || // Preferência por texto longo (textarea)
+      f.id.includes('description') || 
+      f.id.includes('obs') || 
+      f.id.includes('notas') ||
+      f.id.includes('detalhes')
+    );
+
+    if (descriptionField) {
+      targetFieldId = descriptionField.id;
+    } else {
+      // Fallback: Tenta qualquer campo de texto que não pareça ser nome/email
+      const anyTextField = fields.find((f: any) => f.type === 'text' || f.type === 'long_text');
+      if (anyTextField) targetFieldId = anyTextField.id;
+    }
+
+    // Prepara o conteúdo
+    const combinedDescription = `
+      Empresa: ${company}
+      Email: ${email}
+      WhatsApp/Tel: ${phone}
+      
+      Desafio:
+      ${challenge}
+    `;
+
+    // PASSO 2: CRIAÇÃO DO CARD
+    let mutation;
+    let variables: any = {
+      pipe_id: PIPEFY_PIPE_ID,
+      title: company, // O título do card é sempre o nome da empresa
+    };
+
+    if (targetFieldId) {
+      // Se achamos um campo de descrição, usamos ele
+      mutation = `
+        mutation CreateCard($pipe_id: ID!, $title: String!, $field_value: Any) {
+          createCard(input: {
+            pipe_id: $pipe_id,
+            title: $title,
+            fields_attributes: [
+              { field_id: "${targetFieldId}", field_value: $field_value }
+            ]
+          }) {
+            card { id title }
+          }
+        }
+      `;
+      variables.field_value = combinedDescription;
+    } else {
+      // Se NÃO achamos nenhum campo de texto no formulário, colocamos tudo no Título (Fallback de segurança)
+      // Isso é feio, mas garante que o lead chega e não dá erro.
+      mutation = `
+        mutation CreateCard($pipe_id: ID!, $title: String!) {
+          createCard(input: {
+            pipe_id: $pipe_id,
+            title: $title
+          }) {
+            card { id title }
+          }
+        }
+      `;
+      variables.title = `${company} - ${email} - ${phone}`;
+    }
+
+    const createRes = await fetch('https://api.pipefy.com/graphql', {
+      method: 'POST',
+      headers: commonHeaders,
       body: JSON.stringify({ query: mutation, variables: variables }),
     });
 
-    const json = await response.json();
+    const createJson = await createRes.json();
 
-    if (json.errors) {
-      console.error('Pipefy API Error:', JSON.stringify(json.errors, null, 2));
-      
-      // Tenta extrair uma mensagem amigável do erro
-      const errorMsg = json.errors[0]?.message || 'Erro desconhecido no Pipefy';
-      
-      if (errorMsg.includes('field_id')) {
-        return res.status(400).json({ 
-          message: 'Erro de Campo: O campo "description" não foi encontrado no seu Pipe.',
-          details: 'Vá no Pipefy > Notas sobre o negócio > Editar > API ID e mude para "description".'
-        });
-      }
-
+    if (createJson.errors) {
+      const errorMsg = createJson.errors[0]?.message || 'Erro desconhecido';
+      console.error('Pipefy Creation Error:', errorMsg);
       return res.status(500).json({ message: `Erro no Pipefy: ${errorMsg}` });
     }
 
-    return res.status(200).json({ message: 'Lead criado com sucesso', id: json.data.createCard.card.id });
+    return res.status(200).json({ 
+      message: 'Lead criado com sucesso', 
+      id: createJson.data.createCard.card.id,
+      debug_field_used: targetFieldId // Apenas para sabermos qual campo ele escolheu
+    });
+
   } catch (error) {
     console.error('Server Error:', error);
-    return res.status(500).json({ message: 'Erro interno de conexão com Pipefy.' });
+    return res.status(500).json({ message: 'Erro interno de conexão.' });
   }
 }
