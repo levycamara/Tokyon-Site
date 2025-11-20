@@ -25,14 +25,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
 
   try {
-    // PASSO 1: INTROSPECÇÃO (Descobrir quais campos existem no Pipe)
-    // Ao invés de adivinhar o ID ("description"), perguntamos ao Pipe quais campos ele tem.
+    // PASSO 1: INTROSPECÇÃO
+    // Descobrir se existe um campo para salvar a descrição
     const introspectionQuery = `
       query GetPipeFields($pipe_id: ID!) {
         pipe(id: $pipe_id) {
           start_form_fields {
             id
-            label
             type
           }
         }
@@ -46,36 +45,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const introJson = await introspectionRes.json();
-
-    if (introJson.errors) {
-      console.error('Pipefy Introspection Error:', introJson.errors);
-      return res.status(500).json({ message: 'Erro ao ler configurações do Pipefy.' });
-    }
-
-    const fields = introJson.data.pipe.start_form_fields;
     
-    // Lógica Inteligente para encontrar o campo de "Detalhes/Notas"
-    // 1. Procura por campos comuns de descrição
-    // 2. Se não achar, pega o primeiro campo de "text" ou "long_text" que encontrar
     let targetFieldId = null;
 
-    const descriptionField = fields.find((f: any) => 
-      f.type === 'long_text' || // Preferência por texto longo (textarea)
-      f.id.includes('description') || 
-      f.id.includes('obs') || 
-      f.id.includes('notas') ||
-      f.id.includes('detalhes')
-    );
+    if (!introJson.errors && introJson.data?.pipe?.start_form_fields) {
+      const fields = introJson.data.pipe.start_form_fields;
+      
+      // Tenta achar um campo que pareça descrição ou observação
+      const descriptionField = fields.find((f: any) => 
+        f.type === 'long_text' || 
+        f.id.includes('description') || 
+        f.id.includes('obs') || 
+        f.id.includes('notas')
+      );
 
-    if (descriptionField) {
-      targetFieldId = descriptionField.id;
-    } else {
-      // Fallback: Tenta qualquer campo de texto que não pareça ser nome/email
-      const anyTextField = fields.find((f: any) => f.type === 'text' || f.type === 'long_text');
-      if (anyTextField) targetFieldId = anyTextField.id;
+      if (descriptionField) {
+        targetFieldId = descriptionField.id;
+      } else {
+        // Fallback para qualquer campo de texto
+        const anyTextField = fields.find((f: any) => f.type === 'text' || f.type === 'long_text');
+        if (anyTextField) targetFieldId = anyTextField.id;
+      }
     }
 
-    // Prepara o conteúdo
+    // Monta a descrição com todos os dados
     const combinedDescription = `
       Empresa: ${company}
       Email: ${email}
@@ -85,63 +78,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ${challenge}
     `;
 
-    // PASSO 2: CRIAÇÃO DO CARD
-    let mutation;
-    let variables: any = {
+    // PASSO 2: CRIAÇÃO DO CARD USANDO INPUT OBJECT
+    // Esta é a forma mais segura. Criamos o objeto payload no JS e enviamos como uma única variável.
+    
+    const inputPayload: any = {
       pipe_id: PIPEFY_PIPE_ID,
-      title: company, // O título do card é sempre o nome da empresa
+      title: company
     };
 
     if (targetFieldId) {
-      // Se achamos um campo de descrição, usamos ele.
-      // FIX: Alterado de 'Any' para 'String' pois o Pipefy não suporta 'Any' e estamos enviando texto.
-      mutation = `
-        mutation CreateCard($pipe_id: ID!, $title: String!, $field_value: String) {
-          createCard(input: {
-            pipe_id: $pipe_id,
-            title: $title,
-            fields_attributes: [
-              { field_id: "${targetFieldId}", field_value: $field_value }
-            ]
-          }) {
-            card { id title }
-          }
-        }
-      `;
-      variables.field_value = combinedDescription;
+      inputPayload.fields_attributes = [
+        { field_id: targetFieldId, field_value: combinedDescription }
+      ];
     } else {
-      // Se NÃO achamos nenhum campo de texto no formulário, colocamos tudo no Título (Fallback de segurança)
-      mutation = `
-        mutation CreateCard($pipe_id: ID!, $title: String!) {
-          createCard(input: {
-            pipe_id: $pipe_id,
-            title: $title
-          }) {
-            card { id title }
-          }
-        }
-      `;
-      variables.title = `${company} - ${email} - ${phone}`;
+      // Fallback se não achou campo: coloca tudo no título
+      inputPayload.title = `${company} - ${email} - ${phone}`;
     }
+
+    const mutation = `
+      mutation CreateCard($input: CreateCardInput!) {
+        createCard(input: $input) {
+          card { id title }
+        }
+      }
+    `;
 
     const createRes = await fetch('https://api.pipefy.com/graphql', {
       method: 'POST',
       headers: commonHeaders,
-      body: JSON.stringify({ query: mutation, variables: variables }),
+      body: JSON.stringify({ 
+        query: mutation, 
+        variables: { input: inputPayload } 
+      }),
     });
 
     const createJson = await createRes.json();
 
     if (createJson.errors) {
-      const errorMsg = createJson.errors[0]?.message || 'Erro desconhecido';
-      console.error('Pipefy Creation Error:', errorMsg);
-      return res.status(500).json({ message: `Erro no Pipefy: ${errorMsg}` });
+      console.error('Pipefy Error:', JSON.stringify(createJson.errors));
+      return res.status(500).json({ 
+        message: `Erro no Pipefy: ${createJson.errors[0]?.message}`,
+        details: createJson.errors 
+      });
     }
 
     return res.status(200).json({ 
       message: 'Lead criado com sucesso', 
-      id: createJson.data.createCard.card.id,
-      debug_field_used: targetFieldId // Apenas para sabermos qual campo ele escolheu
+      id: createJson.data.createCard.card.id 
     });
 
   } catch (error) {
