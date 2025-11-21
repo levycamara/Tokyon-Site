@@ -2,10 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables for Theming - CRITICAL for colors to work */
+:root {
+  --color-bg-primary: 10 10 10; /* #0a0a0a (Tokyon Black) */
+  --color-text-primary: 255 255 255; /* #ffffff */
+}
+
+.light-mode {
+  --color-bg-primary: 245 245 245; /* Off-white */
+  --color-text-primary: 10 10 10; /* Dark */
+}
+
 /* Base styles and Scrollbar customization */
 body {
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
+  background-color: rgb(var(--color-bg-primary));
+  color: rgb(var(--color-text-primary));
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 

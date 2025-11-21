@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tokyon | Estratégia e Design Corporativo</title>
+    
+    <title>Tokyon | Strategic Branding</title>
+    <meta name="description" content="Agência de Branding Estratégico e Design Corporativo." />
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,6 +36,7 @@
               'slide-up': 'slideUp 0.7s ease-out forwards',
               'shutter-in': 'shutterIn 0.8s cubic-bezier(0.87, 0, 0.13, 1) forwards',
               'shutter-out': 'shutterOut 0.8s cubic-bezier(0.87, 0, 0.13, 1) forwards',
+              'infinite-scroll': 'infinite-scroll 80s linear infinite',
             },
             keyframes: {
               fadeIn: {
@@ -50,34 +54,18 @@
               shutterOut: {
                 '0%': { transform: 'translateY(0)' },
                 '100%': { transform: 'translateY(100%)' },
+              },
+              'infinite-scroll': {
+                from: { transform: 'translateX(0)' },
+                to: { transform: 'translateX(-50%)' },
               }
             }
           }
         }
       }
     </script>
-    <style>
-      /* CSS Variables for Theme Handling */
-      :root {
-        /* RGB values for #050505 (Tokyon Black) */
-        --color-bg-primary: 5 5 5;
-        /* RGB values for #FFFFFF (White) */
-        --color-text-primary: 255 255 255;
-      }
-
-      .light-mode {
-        /* RGB values for #F2F2F2 (Off-White Paper) */
-        --color-bg-primary: 242 242 242;
-        /* RGB values for #050505 (Tokyon Black Text) */
-        --color-text-primary: 5 5 5;
-      }
-
-      body {
-        background-color: rgb(var(--color-bg-primary));
-        color: rgb(var(--color-text-primary));
-      }
-    </style>
-  <script type="importmap">
+    <link rel="stylesheet" href="/index.css">
+<script type="importmap">
 {
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
@@ -89,7 +77,8 @@
     "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
     "path": "https://aistudiocdn.com/path@^0.12.7",
     "url": "https://aistudiocdn.com/url@^0.11.4",
-    "@vercel/node": "https://aistudiocdn.com/@vercel/node@^5.5.8"
+    "@vercel/node": "https://aistudiocdn.com/@vercel/node@^5.5.8",
+    "react-helmet-async": "https://aistudiocdn.com/react-helmet-async@^2.0.5"
   }
 }
 </script>

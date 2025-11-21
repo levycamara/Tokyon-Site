@@ -1,3 +1,4 @@
+
 import { ServiceItem } from './types';
 
 interface TranslationStructure {
@@ -6,6 +7,9 @@ interface TranslationStructure {
     description: string;
     est: string;
     global: string;
+  };
+  clients: {
+    label: string;
   };
   program: {
     label: string;
@@ -104,6 +108,9 @@ export const translations: Record<'pt' | 'en', TranslationStructure> = {
       description: "Design, estratégia e inteligência para grandes corporações.",
       est: "EST. 2024",
       global: "OPERAÇÃO GLOBAL"
+    },
+    clients: {
+      label: "Empresas que já foram impactadas pela TOKYON"
     },
     program: {
       label: "01 — METODOLOGIA",
@@ -380,6 +387,9 @@ export const translations: Record<'pt' | 'en', TranslationStructure> = {
       description: "Design, strategy and intelligence for high-ticket companies.",
       est: "EST. 2024",
       global: "GLOBAL OPERATION"
+    },
+    clients: {
+      label: "Companies impacted by TOKYON"
     },
     program: {
       label: "01 — METHODOLOGY",

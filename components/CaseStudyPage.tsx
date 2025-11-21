@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft } from 'phosphor-react';
 import { getProjectBySlug } from '../services/contentService';
@@ -34,6 +33,7 @@ export const CaseStudyPage: React.FC<CaseStudyPageProps> = ({ slug, onNavigate }
 
   return (
     <div className="bg-tokyon-black min-h-screen text-white animate-fade-in pb-24">
+
       {/* Nav */}
       <div className="fixed top-0 left-0 w-full z-50 px-4 md:px-8 py-6 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent pointer-events-none">
          <button 

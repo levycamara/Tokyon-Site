@@ -26,6 +26,7 @@ export default {
         'slide-up': 'slideUp 0.7s ease-out forwards',
         'shutter-in': 'shutterIn 0.8s cubic-bezier(0.87, 0, 0.13, 1) forwards',
         'shutter-out': 'shutterOut 0.8s cubic-bezier(0.87, 0, 0.13, 1) forwards',
+        'infinite-scroll': 'infinite-scroll 20s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -43,6 +44,10 @@ export default {
         shutterOut: {
           '0%': { transform: 'translateY(0)' },
           '100%': { transform: 'translateY(100%)' },
+        },
+        'infinite-scroll': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
         }
       }
     },

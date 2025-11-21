@@ -1,26 +1,26 @@
-
 import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { OrangeProgram } from './components/OrangeProgram';
 import { ServicesSection } from './components/ServicesSection';
+import { ClientsTicker } from './components/ClientsTicker';
 import { Contact } from './components/Contact';
 import { Footer } from './components/Footer';
 import { AIConsultant } from './components/AIConsultant';
 import { MethodologyPage } from './components/MethodologyPage';
 import { ServiceDetailPage } from './components/ServiceDetailPage';
 import { AdminGenerator } from './components/AdminGenerator';
-import { CaseStudyPage } from './components/CaseStudyPage'; // Nova Importação
+import { CaseStudyPage } from './components/CaseStudyPage';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { TransitionProvider, useTransition } from './contexts/TransitionContext';
 import { PageTransition } from './components/PageTransition';
 
-type Page = 'home' | 'methodology' | 'service-detail' | 'admin' | 'case-study'; // Tipo atualizado
+type Page = 'home' | 'methodology' | 'service-detail' | 'admin' | 'case-study';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
-  const [selectedCaseSlug, setSelectedCaseSlug] = useState<string>(''); // Novo Estado
+  const [selectedCaseSlug, setSelectedCaseSlug] = useState<string>('');
   const { triggerTransition } = useTransition();
 
   const navigateTo = (page: Page, id?: string) => {
@@ -74,6 +74,7 @@ function AppContent() {
         {currentPage === 'home' ? (
           <>
             <Hero />
+            <ClientsTicker />
             <OrangeProgram onNavigate={navigateTo} />
             <ServicesSection onNavigate={navigateTo} />
             <Contact />

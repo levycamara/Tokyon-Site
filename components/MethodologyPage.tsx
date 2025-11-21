@@ -27,6 +27,7 @@ export const MethodologyPage: React.FC<{ onNavigate: (page: 'home' | 'methodolog
 
   return (
     <div className="bg-tokyon-black min-h-screen pt-20 animate-fade-in">
+      
       {/* Header Section */}
       <section className="border-b border-white/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-1/2 h-full bg-white/[0.02] skew-x-12 pointer-events-none"></div>

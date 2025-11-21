@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ArrowLeft, ArrowRight, Check } from 'phosphor-react';
@@ -68,6 +67,7 @@ export const ServiceDetailPage: React.FC<ServiceDetailPageProps> = ({ serviceId,
 
   return (
     <div className="bg-tokyon-black min-h-screen pt-20 animate-fade-in text-white">
+
       <div className="fixed top-20 left-0 w-full z-20 px-4 md:px-8 py-4 pointer-events-none">
         <button 
           onClick={() => onNavigate('home')}
