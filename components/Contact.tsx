@@ -93,10 +93,6 @@ export const Contact: React.FC = () => {
                <p className="text-gray-400 text-lg mb-8 max-w-md">
                   {t.contact.description}
                </p>
-               <div className="space-y-2">
-                  <p className="text-white font-mono">OI@TOKYON.COM.BR</p>
-                  <p className="text-white font-mono">+55 98 99110-2121</p>
-               </div>
             </div>
 
             <div className="bg-white/5 p-8 md:p-12 border border-white/10 relative">
